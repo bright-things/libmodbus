@@ -31,10 +31,12 @@ AC_CONFIG_SRCDIR([src/modbus.c])
 AC_CONFIG_AUX_DIR([build-aux])
 AM_INIT_AUTOMAKE([check-news foreign 1.11 -Wall -Wno-portability silent-rules tar-pax subdir-objects])
 AC_PROG_CC_STDC
+AC_PROG_CXX
 AC_USE_SYSTEM_EXTENSIONS
 AC_SYS_LARGEFILE
 AC_CONFIG_MACRO_DIR([m4])
 AM_SILENT_RULES([yes])
+AC_C_INLINE
 
 LIBMODBUS_VERSION_MAJOR=libmodbus_version_major
 LIBMODBUS_VERSION_MINOR=libmodbus_version_minor
@@ -88,6 +90,11 @@ AC_CHECK_HEADERS([ \
     time.h \
     unistd.h \
 ])
+AC_TYPE_SIZE_T
+AC_TYPE_SSIZE_T
+AC_TYPE_UINT16_T
+AC_TYPE_UINT32_T
+AC_TYPE_UINT8_T
 
 # Check whether to build docs / install man pages
 AC_LIBMODBUS_CHECK_BUILD_DOC
@@ -99,12 +106,15 @@ AC_CHECK_DECLS([__CYGWIN__])
 # Checks for library functions.
 AC_FUNC_FORK
 AC_CHECK_FUNCS([accept4 getaddrinfo gettimeofday inet_ntoa memset select socket strerror strlcpy])
+AC_FUNC_MALLOC
+
 
 # Required for MinGW with GCC v4.8.1 on Win7
 AC_DEFINE(WINVER, 0x0501, _)
 
 # Required for getaddrinfo (TCP PI - IPv6)
 AC_CHECK_HEADERS([winsock2.h], HAVE_WINSOCK2_H=yes)
+AC_CHECK_HEADERS([sys/param.h])
 if test "x$HAVE_WINSOCK2_H" = "xyes"; then
    LIBS="$LIBS -lws2_32"
    AC_SUBST(LIBS)

@@ -69,8 +69,8 @@ typedef struct _modbus_rtu {
 #endif
 #if HAVE_DECL_TIOCM_RTS
     int rts;
-    int onebyte_time;
 #endif
+    int onebyte_time;
     /* To handle many slaves on the same link */
     int confirmation_to_ignore;
 } modbus_rtu_t;

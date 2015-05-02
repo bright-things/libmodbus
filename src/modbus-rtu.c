@@ -273,6 +273,30 @@ static ssize_t _modbus_rtu_send(modbus_t *ctx, const uint8_t *req, int req_lengt
     DWORD n_bytes = 0;
     return (WriteFile(ctx_rtu->w_ser.fd, req, req_length, &n_bytes, NULL)) ? (ssize_t)n_bytes : -1;
 #else
+#if HAVE_DECL_CP2105_GPIO_FOR_RS485_SEND
+    if (ctx->debug) {
+        fprintf(stderr, "Driver Enabled, Receiver Off\n");
+    }
+    uint16_t gpio = 0xFF;
+    if( ioctl(ctx->s, 0x8001, &gpio) ) {
+        if( ctx->debug ) {
+            fprintf( stderr, "Unable to set GPIO low.\n" );
+        }
+    } 
+    ssize_t ssize = write(ctx->s, req, req_length);
+    if (ctx->debug) {
+        fprintf(stderr, "Driver Disabled, Receiver On\n");
+    }
+    modbus_rtu_t *ctx_rtu = ctx->backend_data;
+    usleep(ctx_rtu->onebyte_time * (req_length + 1) );
+    gpio = 0xFFFF;
+    if( ioctl(ctx->s, 0x8001, &gpio) ) {
+        if( ctx->debug ) {
+            fprintf( stderr, "Unable to set GPIO high.\n" );
+        }
+    }
+    return ssize;
+#else
 #if HAVE_DECL_TIOCM_RTS
     modbus_rtu_t *ctx_rtu = ctx->backend_data;
     if (ctx_rtu->rts != MODBUS_RTU_RTS_NONE) {
@@ -294,8 +318,9 @@ static ssize_t _modbus_rtu_send(modbus_t *ctx, const uint8_t *req, int req_lengt
     } else {
 #endif
         return write(ctx->s, req, req_length);
-#if HAVE_DECL_TIOCM_RTS
+#if HAVE_DECL_TIOCM_RTS 
     }
+#endif
 #endif
 #endif
 }
@@ -903,7 +928,6 @@ int modbus_rtu_set_serial_mode(modbus_t *ctx, int mode)
         errno = EINVAL;
         return -1;
     }
-
     if (ctx->backend->backend_type == _MODBUS_BACKEND_TYPE_RTU) {
 #if HAVE_DECL_TIOCSRS485
         modbus_rtu_t *ctx_rtu = ctx->backend_data;
@@ -1183,10 +1207,8 @@ modbus_t* modbus_new_rtu(const char *device,
     ctx_rtu->rts = MODBUS_RTU_RTS_NONE;
 
     /* Calculate estimated time in micro second to send one byte */
-    ctx_rtu->onebyte_time = (1000 * 1000) * (1 + data_bit + (parity == 'N' ? 0 : 1) + stop_bit) / baud;
 #endif
-
+    ctx_rtu->onebyte_time = (1000 * 1000) * (1 + data_bit + (parity == 'N' ? 0 : 1) + stop_bit) / baud;
     ctx_rtu->confirmation_to_ignore = FALSE;
-
     return ctx;
 }
